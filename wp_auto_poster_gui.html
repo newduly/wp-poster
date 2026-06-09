@@ -276,8 +276,13 @@ textarea{resize:vertical;line-height:1.65;font-family:'IBM Plex Mono',monospace;
               <input type="password" id="wp_pass" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx">
             </div>
             <div class="fg">
-              <label>카테고리 ID</label>
-              <input type="number" id="wp_cat" value="1">
+              <label>카테고리 이름</label>
+              <div style="display:flex;gap:6px">
+                <input id="wp_cat_name" placeholder="예: 생활정보" style="flex:1">
+                <button class="btn btn-ghost" onclick="fetchCategory()" style="white-space:nowrap;flex-shrink:0">조회</button>
+              </div>
+              <div id="cat-result" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
+              <input type="hidden" id="wp_cat" value="1">
             </div>
             <div class="fg">
               <label>발행 상태</label>
@@ -579,7 +584,7 @@ function go(name){
 function getConfig(){
   return {
     wp_url:v('wp_url'),wp_user:v('wp_user'),wp_pass:v('wp_pass'),
-    wp_cat:v('wp_cat'),wp_status:v('wp_status'),
+    wp_cat:v('wp_cat'),wp_cat_name:v('wp_cat_name'),wp_status:v('wp_status'),
     api_key:v('api_key'),api_model:v('api_model'),
     api_lang:v('api_lang'),api_words:v('api_words'),api_tone:v('api_tone'),
     keywords:v('keywords'),
@@ -605,7 +610,7 @@ function saveAll(){
 function loadSaved(){
   try{
     const d=JSON.parse(localStorage.getItem('wp_poster_cfg')||'{}');
-    const ids=['wp_url','wp_user','wp_pass','wp_cat','wp_status','api_key','api_model',
+    const ids=['wp_url','wp_user','wp_pass','wp_cat','wp_cat_name','wp_status','api_key','api_model',
       'api_lang','api_words','api_tone','keywords','p_title','p_content','p_tag',
       'ad_code','hour_start','hour_end'];
     ids.forEach(id=>{if(d[id]!==undefined && document.getElementById(id)) document.getElementById(id).value=d[id];});
@@ -706,13 +711,54 @@ function drawThumb(){
     ctx.textAlign='center';
     ctx.fillText(line,W/2,sy+i*lh+48);
   });
-  ctx.font='16px sans-serif';
-  ctx.fillStyle=`rgb(${th.s})`;
-  ctx.textAlign='center';
-  ctx.fillText('AI 자동 포스팅 시스템',W/2,H-28);
+
 }
 
-// ── 연결 테스트 ───────────────────────────────────────────────────────────────
+// ── 카테고리 조회 ─────────────────────────────────────────────────────────────
+async function fetchCategory(){
+  const url=v('wp_url').trim(),user=v('wp_user').trim(),pass=v('wp_pass');
+  const name=v('wp_cat_name').trim();
+  const el=document.getElementById('cat-result');
+  if(!url||!user||!pass){el.textContent='먼저 URL, 아이디, 비밀번호를 입력해주세요';el.style.color='var(--red)';return;}
+  if(!name){el.textContent='카테고리 이름을 입력해주세요';el.style.color='var(--red)';return;}
+  el.textContent='조회 중...';el.style.color='var(--text3)';
+  try{
+    const res=await fetch(`${url.replace(/\/$/,'')}/wp-json/wp/v2/categories?search=${encodeURIComponent(name)}&per_page=20`,{
+      headers:{Authorization:'Basic '+btoa(user+':'+pass)}
+    });
+    if(!res.ok){el.textContent='조회 실패 — 연결 정보 확인';el.style.color='var(--red)';return;}
+    const cats=await res.json();
+    const match=cats.find(c=>c.name===name)||cats[0];
+    if(match){
+      document.getElementById('wp_cat').value=match.id;
+      el.textContent=`✓ "${match.name}" 카테고리 찾음 (ID: ${match.id})`;
+      el.style.color='var(--green)';
+      showToast(`카테고리 "${match.name}" 선택됨`);
+    }else{
+      // 없으면 새로 생성
+      const cr=await fetch(`${url.replace(/\/$/,'')}/wp-json/wp/v2/categories`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json',Authorization:'Basic '+btoa(user+':'+pass)},
+        body:JSON.stringify({name})
+      });
+      if(cr.ok){
+        const nd=await cr.json();
+        document.getElementById('wp_cat').value=nd.id;
+        el.textContent=`✓ "${nd.name}" 카테고리 새로 생성됨 (ID: ${nd.id})`;
+        el.style.color='var(--green)';
+        showToast(`카테고리 "${nd.name}" 생성됨`);
+      }else{
+        el.textContent='카테고리를 찾을 수 없습니다. 이름을 확인해주세요';
+        el.style.color='var(--amber)';
+      }
+    }
+  }catch(e){
+    el.textContent='연결 오류 — URL을 확인해주세요';
+    el.style.color='var(--red)';
+  }
+}
+
+
 async function testWP(){
   const url=v('wp_url').trim(),user=v('wp_user').trim(),pass=v('wp_pass');
   const el=document.getElementById('wp-test');
@@ -731,10 +777,10 @@ async function testAPI(){
   if(!key){showResult(el,'API 키를 입력해주세요','err');return;}
   showResult(el,'API 연결 테스트 중...','');
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch(PROXY_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:v('api_model'),max_tokens:1000,messages:[{role:'user',content:'안녕하세요. 연결 테스트입니다. "연결 성공"이라고만 답해주세요.'}]})
+      body:JSON.stringify({api_key:key,model:v('api_model'),max_tokens:1000,messages:[{role:'user',content:'안녕하세요. 연결 테스트입니다. "연결 성공"이라고만 답해주세요.'}]})
     });
     const d=await res.json();
     if(res.ok)showResult(el,'✓ API 연결 성공! 모델: '+v('api_model'),'ok');
@@ -749,6 +795,9 @@ function showResult(el,msg,type){
 }
 
 // ── 자동 실행 ─────────────────────────────────────────────────────────────────
+// 프록시 주소 설정 (서버에 올린 proxy.php 주소)
+const PROXY_URL = 'https://gorgopage.com/poster/proxy.php';
+
 let kwList=[],doneList=[],currentIdx=0;
 
 function toggleRun(){
@@ -907,10 +956,10 @@ function startCountdown(sec){
 }
 
 async function claudeCall(prompt){
-  const res=await fetch('https://api.anthropic.com/v1/messages',{
+  const res=await fetch(PROXY_URL,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({model:v('api_model'),max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    body:JSON.stringify({api_key:v('api_key'),model:v('api_model'),max_tokens:1000,messages:[{role:'user',content:prompt}]})
   });
   const d=await res.json();
   if(!res.ok)throw new Error(d.error?.message||'API 오류');
