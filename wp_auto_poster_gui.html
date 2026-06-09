@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>WP Auto Poster</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d10;--bg2:#131318;--bg3:#1a1a22;--bg4:#22222e;
+  --border:#2a2a38;--border2:#36364a;
+  --text:#e8e8f2;--text2:#8888a8;--text3:#44445a;
+  --accent:#4f8ef7;--accent2:#1a2d5a;
+  --green:#3ecf8e;--green2:#0e2820;
+  --amber:#f0a832;--amber2:#2e2010;
+  --red:#f05252;--red2:#2e1010;
+  --wp:#0073aa;
+}
+body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:14px}
+
+/* 타이틀바 */
+.titlebar{height:44px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;user-select:none}
+.titlebar-logo{width:26px;height:26px;background:var(--wp);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace}
+.titlebar-name{font-size:13px;font-weight:600;letter-spacing:-.02em}
+.titlebar-version{font-size:11px;color:var(--text3);background:var(--bg4);padding:2px 7px;border-radius:4px;font-family:'IBM Plex Mono',monospace}
+.titlebar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.run-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
+.run-dot{width:7px;height:7px;border-radius:50%;background:var(--text3)}
+.run-dot.on{background:var(--green);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* 레이아웃 */
+.layout{display:flex;flex:1;overflow:hidden}
+
+/* 사이드바 */
+.sidebar{width:210px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-section{padding:14px 12px 6px;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+.nav{padding:0 8px}
+.nv{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--text2);font-size:13px;margin-bottom:2px;transition:all .15s;user-select:none}
+.nv svg{width:16px;height:16px;flex-shrink:0;opacity:.7}
+.nv:hover{background:var(--bg3);color:var(--text)}
+.nv.on{background:var(--accent2);color:var(--accent);font-weight:500}
+.nv.on svg{opacity:1}
+.sidebar-bottom{margin-top:auto;padding:14px 12px;border-top:1px solid var(--border)}
+.save-badge{font-size:11px;color:var(--green);display:flex;align-items:center;gap:5px;margin-bottom:10px}
+.btn-full{width:100%;padding:9px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:'IBM Plex Sans KR',sans-serif;transition:all .15s}
+.btn-start{background:var(--wp);color:#fff}
+.btn-start:hover{background:#005c8a}
+.btn-start:disabled{opacity:.4;cursor:not-allowed}
+.btn-stop{background:var(--red2);color:var(--red);border:1px solid #4a1010}
+.btn-stop:hover{background:#3a1010}
+
+/* 메인 */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:48px;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 22px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-title{font-size:14px;font-weight:500;color:var(--text2)}
+.topbar-title b{color:var(--text)}
+.btn-row{display:flex;gap:8px}
+.btn{padding:6px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:none;font-family:'IBM Plex Sans KR',sans-serif;transition:all .15s;display:flex;align-items:center;gap:5px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#3a7ce8}
+.btn-ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg4);color:var(--text)}
+.btn-green{background:var(--green2);color:var(--green);border:1px solid #1a4030}
+.btn-red{background:var(--red2);color:var(--red);border:1px solid #3a1010}
+
+/* 콘텐츠 */
+.content{flex:1;overflow-y:auto;padding:20px 22px}
+.page{display:none}
+.page.on{display:block}
+
+/* 카드 */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:14px}
+.card-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.card-title svg{width:14px;height:14px}
+
+/* 폼 */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.span2{grid-column:1/-1}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}
+.fg:last-child{margin-bottom:0}
+label{font-size:11px;color:var(--text2);font-weight:500;letter-spacing:.02em}
+input,select,textarea{
+  width:100%;padding:8px 11px;
+  border:1px solid var(--border);border-radius:8px;
+  font-size:13px;color:var(--text);
+  background:var(--bg3);
+  font-family:'IBM Plex Sans KR',sans-serif;
+  outline:none;transition:border .15s,box-shadow .15s
+}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,142,247,.1)}
+input[type=password]{font-family:'IBM Plex Mono',monospace;letter-spacing:.05em}
+input[type=range]{padding:4px 0;background:transparent;border:none;cursor:pointer}
+select option{background:var(--bg3)}
+textarea{resize:vertical;line-height:1.65;font-family:'IBM Plex Mono',monospace;font-size:12px}
+
+/* 토글 */
+.tog-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.tog-row:last-child{border-bottom:none;padding-bottom:0}
+.tog-row:first-child{padding-top:0}
+.tog-label{font-size:13px}
+.tog-desc{font-size:11px;color:var(--text3);margin-top:2px}
+.tog{width:38px;height:22px;background:var(--bg4);border-radius:100px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:1px solid var(--border2)}
+.tog.on{background:var(--accent);border-color:var(--accent)}
+.tog::after{content:'';width:16px;height:16px;background:var(--text3);border-radius:50%;position:absolute;top:2px;left:2px;transition:all .2s}
+.tog.on::after{left:18px;background:#fff}
+
+/* 스케줄 카드 */
+.sched-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.sched-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:all .15s;text-align:center;user-select:none}
+.sched-card:hover{border-color:var(--border2)}
+.sched-card.on{background:var(--accent2);border-color:var(--accent)}
+.sched-card .st{font-size:16px;font-weight:600;color:var(--text);font-family:'IBM Plex Mono',monospace}
+.sched-card.on .st{color:var(--accent)}
+.sched-card .sd{font-size:11px;color:var(--text3);margin-top:3px}
+
+/* 키워드 */
+.kw-wrap{position:relative}
+.kw-count{position:absolute;bottom:9px;right:11px;font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace;pointer-events:none}
+.kw-count.warn{color:var(--amber)}
+
+/* 진행상황 */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.stat{background:var(--bg3);border-radius:10px;padding:13px 15px;border:1px solid var(--border)}
+.stat-l{font-size:11px;color:var(--text3);margin-bottom:5px}
+.stat-v{font-size:22px;font-weight:600;font-family:'IBM Plex Mono',monospace}
+.blue{color:var(--accent)}
+.green{color:var(--green)}
+.amber{color:var(--amber)}
+
+.prog-wrap{background:var(--bg4);border-radius:100px;height:5px;overflow:hidden;margin-bottom:14px}
+.prog-bar{height:100%;background:var(--accent);border-radius:100px;transition:width .5s;width:0%}
+
+.log-box{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px;min-height:200px;max-height:320px;overflow-y:auto;line-height:1.9}
+.log-ok{color:var(--green)}
+.log-err{color:var(--red)}
+.log-info{color:var(--accent)}
+.log-wait{color:var(--amber)}
+.log-dim{color:var(--text3)}
+
+/* 배지/칩 */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:500}
+.badge-blue{background:var(--accent2);color:var(--accent)}
+.badge-green{background:var(--green2);color:var(--green)}
+.badge-amber{background:var(--amber2);color:var(--amber)}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.chip{padding:3px 10px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--accent);cursor:pointer;transition:all .15s;user-select:none}
+.chip:hover{background:var(--accent2);border-color:var(--accent)}
+
+/* 알림 */
+.notice{padding:10px 13px;border-radius:8px;font-size:12px;margin-bottom:12px;line-height:1.6}
+.notice-amber{background:var(--amber2);border:1px solid #3a2a10;color:#c88830}
+.notice-blue{background:var(--accent2);border:1px solid #1a2a5a;color:#7aadff}
+.notice-green{background:var(--green2);border:1px solid #1a4030;color:var(--green)}
+
+/* 연결 테스트 */
+.test-result{font-size:12px;margin-top:8px;padding:8px 11px;border-radius:7px;display:none}
+.test-ok{background:var(--green2);color:var(--green);border:1px solid #1a4030}
+.test-err{background:var(--red2);color:var(--red);border:1px solid #3a1010}
+
+/* 광고 위치 선택 */
+.ad-opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.ad-opt{padding:6px 14px;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;color:var(--text2);background:var(--bg3);transition:all .15s;user-select:none}
+.ad-opt.on{background:var(--accent2);border-color:var(--accent);color:var(--accent);font-weight:500}
+
+/* 썸네일 */
+.thumb-styles{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.thumb-style{width:80px;height:50px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:all .15s;position:relative;overflow:hidden;flex-shrink:0}
+.thumb-style.on{border-color:var(--accent)}
+.thumb-style span{position:absolute;bottom:4px;left:0;right:0;text-align:center;font-size:9px;color:#fff;font-weight:600}
+
+/* 토스트 */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--bg2);border:1px solid var(--green);border-radius:10px;padding:11px 16px;font-size:13px;color:var(--green);opacity:0;transform:translateY(8px);transition:all .3s;pointer-events:none;z-index:99;font-family:'IBM Plex Sans KR',sans-serif}
+#toast.show{opacity:1;transform:translateY(0)}
+
+/* 스크롤바 */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- 타이틀바 -->
+<div class="titlebar">
+  <div class="titlebar-logo">WP</div>
+  <div class="titlebar-name">WordPress Auto Poster</div>
+  <div class="titlebar-version">v2.0</div>
+  <div class="titlebar-right">
+    <div class="run-status">
+      <div class="run-dot" id="run-dot"></div>
+      <span id="run-status-txt">대기중</span>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- 사이드바 -->
+  <div class="sidebar">
+    <div class="sidebar-section">설정</div>
+    <div class="nav">
+      <div class="nv on" onclick="go('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        기본 설정
+      </div>
+      <div class="nv" onclick="go('keywords')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10H3M21 6H3M21 14H3M21 18H3"/></svg>
+        키워드 관리
+      </div>
+      <div class="nv" onclick="go('prompt')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        프롬프트
+      </div>
+      <div class="nv" onclick="go('adsense')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        애드센스
+      </div>
+      <div class="nv" onclick="go('schedule')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        스케줄
+      </div>
+      <div class="nv" onclick="go('thumbnail')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        썸네일
+      </div>
+    </div>
+
+    <div class="sidebar-section" style="margin-top:8px">실행</div>
+    <div class="nav">
+      <div class="nv" onclick="go('monitor')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        모니터
+      </div>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="save-badge" id="save-badge" style="display:none">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+        설정 저장됨
+      </div>
+      <button class="btn-full btn-start" id="main-btn" onclick="toggleRun()">▶ 자동 실행 시작</button>
+    </div>
+  </div>
+
+  <!-- 메인 -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title"><b>기본 설정</b></div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="loadSaved()">↩ 불러오기</button>
+        <button class="btn btn-primary" onclick="saveAll()">저장 ✓</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- 기본 설정 -->
+      <div id="page-settings" class="page on">
+        <div class="card">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            WordPress 연결
+          </div>
+          <div class="grid2">
+            <div class="fg span2">
+              <label>사이트 URL</label>
+              <input id="wp_url" placeholder="https://yoursite.com">
+            </div>
+            <div class="fg">
+              <label>관리자 아이디</label>
+              <input id="wp_user" placeholder="admin">
+            </div>
+            <div class="fg">
+              <label>앱 비밀번호 (Application Password)</label>
+              <input type="password" id="wp_pass" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx">
+            </div>
+            <div class="fg">
+              <label>카테고리 ID</label>
+              <input type="number" id="wp_cat" value="1">
+            </div>
+            <div class="fg">
+              <label>발행 상태</label>
+              <select id="wp_status">
+                <option value="publish">publish — 즉시 발행</option>
+                <option value="draft">draft — 임시저장</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-ghost" onclick="testWP()" style="margin-top:4px">연결 테스트</button>
+          <div class="test-result" id="wp-test"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 0 20M12 2a15.3 15.3 0 0 0 0 20"/></svg>
+            Anthropic API
+          </div>
+          <div class="grid2">
+            <div class="fg span2">
+              <label>API Key</label>
+              <input type="password" id="api_key" placeholder="sk-ant-...">
+            </div>
+            <div class="fg">
+              <label>모델</label>
+              <select id="api_model">
+                <option value="claude-sonnet-4-20250514">claude-sonnet-4 (권장)</option>
+                <option value="claude-haiku-4-5-20251001">claude-haiku-4.5 (저렴)</option>
+                <option value="claude-opus-4-20250514">claude-opus-4 (최고품질)</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>글 언어</label>
+              <select id="api_lang">
+                <option value="한국어">한국어</option>
+                <option value="English">English</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>글 최소 길이</label>
+              <select id="api_words">
+                <option value="800">800자</option>
+                <option value="1200" selected>1200자 (권장)</option>
+                <option value="1800">1800자</option>
+                <option value="2500">2500자</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>톤앤매너</label>
+              <select id="api_tone">
+                <option value="친근하고 이해하기 쉽게">친근하고 이해하기 쉽게</option>
+                <option value="전문적이고 신뢰감 있게">전문적이고 신뢰감 있게</option>
+                <option value="재미있고 유머러스하게">재미있고 유머러스하게</option>
+                <option value="간결하고 핵심만">간결하고 핵심만</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-ghost" onclick="testAPI()" style="margin-top:4px">API 연결 테스트</button>
+          <div class="test-result" id="api-test"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            글쓰기 옵션
+          </div>
+          <div class="tog-row">
+            <div><div class="tog-label">자동 태그 생성</div><div class="tog-desc">키워드 기반 SEO 태그 5~8개 자동 생성</div></div>
+            <div class="tog on" id="tog-tags" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="tog-row">
+            <div><div class="tog-label">메타 디스크립션 자동 생성</div><div class="tog-desc">검색 결과에 표시되는 설명글 자동 작성</div></div>
+            <div class="tog on" id="tog-meta" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="tog-row">
+            <div><div class="tog-label">H2/H3 헤딩 구조화</div><div class="tog-desc">SEO 최적화된 헤딩 계층 구조 자동 적용</div></div>
+            <div class="tog on" id="tog-head" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="tog-row">
+            <div><div class="tog-label">중복 키워드 건너뛰기</div><div class="tog-desc">이미 발행된 키워드는 자동으로 스킵</div></div>
+            <div class="tog on" id="tog-dedup" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="tog-row">
+            <div><div class="tog-label">FAQ 섹션 자동 생성</div><div class="tog-desc">글 하단에 FAQ 추가 (구글 상위노출에 유리)</div></div>
+            <div class="tog on" id="tog-faq" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 키워드 -->
+      <div id="page-keywords" class="page">
+        <div class="card">
+          <div class="card-title">키워드 목록 <span class="badge badge-blue" id="kw-badge">0개</span></div>
+          <div class="notice notice-blue">💡 한 줄에 키워드 또는 제목 하나씩 입력. 제목 형태로 넣으면 그대로 사용하고, 단어만 넣으면 AI가 제목을 자동 생성합니다.</div>
+          <div class="kw-wrap">
+            <textarea id="keywords" rows="20" placeholder="다이어트 방법&#10;집에서 할 수 있는 다이어트 운동 5가지&#10;독서 습관 만들기&#10;재테크 초보가 알아야 할 것들&#10;영어 공부법&#10;..." oninput="updateKw()"></textarea>
+            <div class="kw-count" id="kw-count">0 / 100</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-ghost" onclick="loadSampleKw()">샘플 불러오기</button>
+            <button class="btn btn-red" onclick="clearKw()">초기화</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 프롬프트 -->
+      <div id="page-prompt" class="page">
+        <div class="card">
+          <div class="card-title">제목 생성 프롬프트</div>
+          <textarea id="p_title" rows="4">키워드 "{keyword}"로 구글/네이버 SEO에 최적화된 블로그 제목 1개를 작성하세요.
+규칙: 40~55자 이내, 숫자 포함 권장, 키워드를 앞쪽에 배치, 클릭 유도 표현 사용.
+언어: {lang}
+제목만 출력하세요.</textarea>
+        </div>
+        <div class="card">
+          <div class="card-title">본문 생성 프롬프트</div>
+          <textarea id="p_content" rows="16">당신은 구글과 네이버 SEO 전문 블로그 작성자입니다.
+
+키워드: "{keyword}"
+제목: "{title}"
+언어: {lang}
+톤: {tone}
+작성일: {date}
+
+[구조 규칙]
+- 도입부: 독자의 고민/문제를 공감하며 시작 (3~4줄)
+- H2 헤딩 4~5개로 본문 구성
+- 각 H2 아래 H3 소제목 2~3개
+- 본문 {min_words}자 이상
+- 마무리: 핵심 요약 + 행동 유도 문구
+
+[SEO 규칙]
+- 첫 문단 100자 안에 키워드 자연스럽게 삽입
+- 키워드를 본문 전체에 3~5회 자연스럽게 반복
+- LSI 키워드(관련 유사 키워드)도 함께 사용
+- 문장은 짧고 명확하게 (한 문장 50자 이내 권장)
+- 숫자, 리스트(ul/li), 강조(strong) 적극 활용
+
+[네이버 추가 규칙]
+- 구어체와 문어체 적절히 혼합
+- 소제목마다 핵심 내용 요약 한 줄 추가
+
+[출력 형식]
+- HTML만 출력 (body 태그 내용만)
+- markdown 절대 사용 금지
+- 광고 삽입 위치에 <!--AD_SLOT--> 주석을 2~3곳 삽입</textarea>
+          <div class="chip-row">
+            <span class="chip" onclick="ins('p_content','{keyword}')">{keyword}</span>
+            <span class="chip" onclick="ins('p_content','{title}')">{title}</span>
+            <span class="chip" onclick="ins('p_content','{lang}')">{lang}</span>
+            <span class="chip" onclick="ins('p_content','{tone}')">{tone}</span>
+            <span class="chip" onclick="ins('p_content','{date}')">{date}</span>
+            <span class="chip" onclick="ins('p_content','{min_words}')">{min_words}</span>
+            <span class="chip" onclick="ins('p_content','<!--AD_SLOT-->')">AD_SLOT</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">태그 생성 프롬프트</div>
+          <textarea id="p_tag" rows="3">키워드 "{keyword}"와 제목 "{title}"을 보고 SEO에 적합한 태그를 5~8개 생성하세요. 쉼표로 구분하여 태그명만 출력하세요.</textarea>
+        </div>
+      </div>
+
+      <!-- 애드센스 -->
+      <div id="page-adsense" class="page">
+        <div class="card">
+          <div class="card-title">애드센스 광고 코드</div>
+          <div class="notice notice-amber">💡 본문의 &lt;!--AD_SLOT--&gt; 위치에 아래 코드가 자동으로 삽입됩니다.</div>
+          <div class="fg">
+            <label>광고 코드 (ins 태그 전체 붙여넣기)</label>
+            <textarea id="ad_code" rows="9" placeholder='&lt;ins class="adsbygoogle"
+     style="display:block;text-align:center"
+     data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+     data-ad-slot="XXXXXXXXXX"
+     data-ad-format="auto"
+     data-full-width-responsive="true"&gt;&lt;/ins&gt;
+&lt;script&gt;(adsbygoogle = window.adsbygoogle || []).push({});&lt;/script&gt;'></textarea>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">광고 삽입 위치</div>
+          <div class="ad-opts">
+            <div class="ad-opt on" onclick="this.classList.toggle('on')">본문 1/3 지점</div>
+            <div class="ad-opt on" onclick="this.classList.toggle('on')">본문 2/3 지점</div>
+            <div class="ad-opt" onclick="this.classList.toggle('on')">글 하단</div>
+            <div class="ad-opt" onclick="this.classList.toggle('on')">글 상단</div>
+          </div>
+          <p style="font-size:11px;color:var(--text3);margin-top:10px">* 프롬프트에 &lt;!--AD_SLOT--&gt; 포함 시 Claude가 자동 배치합니다.</p>
+        </div>
+      </div>
+
+      <!-- 스케줄 -->
+      <div id="page-schedule" class="page">
+        <div class="card">
+          <div class="card-title">발행 간격</div>
+          <div class="sched-grid">
+            <div class="sched-card" onclick="setSched(this,60,300)"><div class="st">1~5분</div><div class="sd">빠른 테스트</div></div>
+            <div class="sched-card" onclick="setSched(this,600,1800)"><div class="st">10~30분</div><div class="sd">빠른 발행</div></div>
+            <div class="sched-card on" onclick="setSched(this,3600,10800)"><div class="st">1~3시간</div><div class="sd">자연스러운 패턴 ✓</div></div>
+            <div class="sched-card" onclick="setSched(this,10800,21600)"><div class="st">3~6시간</div><div class="sd">여유있게</div></div>
+            <div class="sched-card" onclick="setSched(this,21600,43200)"><div class="st">6~12시간</div><div class="sd">하루 2~4개</div></div>
+            <div class="sched-card" onclick="setSched(this,0,0,'custom')"><div class="st">직접 설정</div><div class="sd">분 단위 커스텀</div></div>
+          </div>
+          <div id="custom-range" style="display:none">
+            <div class="grid2">
+              <div class="fg"><label>최소 간격 (분)</label><input type="number" id="sched_min" placeholder="60"></div>
+              <div class="fg"><label>최대 간격 (분)</label><input type="number" id="sched_max" placeholder="180"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">운영 시간대</div>
+          <div class="grid2">
+            <div class="fg"><label>시작 시간</label><input type="time" id="hour_start" value="09:00"></div>
+            <div class="fg"><label>종료 시간</label><input type="time" id="hour_end" value="23:00"></div>
+          </div>
+          <div class="tog-row" style="margin-top:10px">
+            <div><div class="tog-label">주말 발행 허용</div><div class="tog-desc">토요일, 일요일에도 자동 포스팅</div></div>
+            <div class="tog on" id="tog-weekend" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 썸네일 -->
+      <div id="page-thumbnail" class="page">
+        <div class="card">
+          <div class="card-title">썸네일 자동 생성</div>
+          <div class="tog-row">
+            <div><div class="tog-label">썸네일 자동 생성 사용</div><div class="tog-desc">글 제목으로 썸네일 이미지를 자동 생성하여 대표이미지로 설정</div></div>
+            <div class="tog on" id="tog-thumb" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">스타일 선택</div>
+          <div class="thumb-styles" id="thumb-styles">
+            <div class="thumb-style on" data-style="blue" onclick="selectThumb(this)" style="background:linear-gradient(135deg,#1a3a6b,#0073aa)"><span>파란색</span></div>
+            <div class="thumb-style" data-style="dark" onclick="selectThumb(this)" style="background:linear-gradient(135deg,#1a1a2e,#16213e)"><span>다크</span></div>
+            <div class="thumb-style" data-style="green" onclick="selectThumb(this)" style="background:linear-gradient(135deg,#1a4d2e,#2d7a4f)"><span>초록</span></div>
+            <div class="thumb-style" data-style="purple" onclick="selectThumb(this)" style="background:linear-gradient(135deg,#2d1b69,#553d8b)"><span>보라</span></div>
+            <div class="thumb-style" data-style="orange" onclick="selectThumb(this)" style="background:linear-gradient(135deg,#7a2d00,#c45000)"><span>오렌지</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">미리보기</div>
+          <div class="fg">
+            <label>제목 입력해서 미리보기</label>
+            <input id="thumb_preview_text" placeholder="블로그 글 제목을 입력해보세요" oninput="drawThumb()">
+          </div>
+          <canvas id="thumb-canvas" width="800" height="420" style="width:100%;border-radius:8px;margin-top:8px;border:1px solid var(--border)"></canvas>
+        </div>
+      </div>
+
+      <!-- 모니터 -->
+      <div id="page-monitor" class="page">
+        <div class="stat-grid">
+          <div class="stat"><div class="stat-l">전체 키워드</div><div class="stat-v blue" id="m-total">0</div></div>
+          <div class="stat"><div class="stat-l">완료</div><div class="stat-v green" id="m-done">0</div></div>
+          <div class="stat"><div class="stat-l">남은 키워드</div><div class="stat-v amber" id="m-left">0</div></div>
+          <div class="stat"><div class="stat-l">다음 발행까지</div><div class="stat-v" id="m-next" style="font-size:16px;margin-top:4px">—</div></div>
+        </div>
+        <div class="prog-wrap"><div class="prog-bar" id="m-bar"></div></div>
+        <div class="card">
+          <div class="card-title" style="justify-content:space-between">
+            실행 로그
+            <button class="btn btn-ghost" style="font-size:11px;padding:3px 9px" onclick="clearLog()">지우기</button>
+          </div>
+          <div class="log-box" id="log-box">
+            <span class="log-dim">▸ 자동 실행을 시작하면 여기에 로그가 표시됩니다.</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div>
+
+<div id="toast"></div>
+
+<script>
+const PAGES=['settings','keywords','prompt','adsense','schedule','thumbnail','monitor'];
+const TITLES={settings:'기본 설정',keywords:'키워드 관리',prompt:'프롬프트 편집',adsense:'애드센스 광고',schedule:'발행 스케줄',thumbnail:'썸네일 설정',monitor:'모니터'};
+let schedMinSec=3600,schedMaxSec=10800;
+let thumbStyle='blue';
+let running=false,runTimer=null,nextCountdown=0;
+
+// ── 네비게이션 ───────────────────────────────────────────────────────────────
+function go(name){
+  PAGES.forEach(p=>{
+    document.getElementById('page-'+p).classList.toggle('on',p===name);
+  });
+  document.querySelectorAll('.nv').forEach((el,i)=>{
+    el.classList.toggle('on',PAGES[i]===name);
+  });
+  document.getElementById('topbar-title').innerHTML=`<b>${TITLES[name]}</b>`;
+  if(name==='thumbnail') setTimeout(drawThumb,50);
+  if(name==='monitor') updateStats();
+}
+
+// ── 저장/불러오기 ─────────────────────────────────────────────────────────────
+function getConfig(){
+  return {
+    wp_url:v('wp_url'),wp_user:v('wp_user'),wp_pass:v('wp_pass'),
+    wp_cat:v('wp_cat'),wp_status:v('wp_status'),
+    api_key:v('api_key'),api_model:v('api_model'),
+    api_lang:v('api_lang'),api_words:v('api_words'),api_tone:v('api_tone'),
+    keywords:v('keywords'),
+    p_title:v('p_title'),p_content:v('p_content'),p_tag:v('p_tag'),
+    ad_code:v('ad_code'),
+    schedMinSec,schedMaxSec,
+    hour_start:v('hour_start'),hour_end:v('hour_end'),
+    tog_tags:tog('tog-tags'),tog_meta:tog('tog-meta'),tog_head:tog('tog-head'),
+    tog_dedup:tog('tog-dedup'),tog_faq:tog('tog-faq'),tog_weekend:tog('tog-weekend'),
+    tog_thumb:tog('tog-thumb'),thumbStyle,
+  };
+}
+
+function saveAll(){
+  try{
+    localStorage.setItem('wp_poster_cfg',JSON.stringify(getConfig()));
+    document.getElementById('save-badge').style.display='flex';
+    showToast('모든 설정이 저장됐어요 ✓');
+    updateStats();
+  }catch(e){showToast('저장 실패: '+e.message);}
+}
+
+function loadSaved(){
+  try{
+    const d=JSON.parse(localStorage.getItem('wp_poster_cfg')||'{}');
+    const ids=['wp_url','wp_user','wp_pass','wp_cat','wp_status','api_key','api_model',
+      'api_lang','api_words','api_tone','keywords','p_title','p_content','p_tag',
+      'ad_code','hour_start','hour_end'];
+    ids.forEach(id=>{if(d[id]!==undefined && document.getElementById(id)) document.getElementById(id).value=d[id];});
+    if(d.schedMinSec){schedMinSec=d.schedMinSec;schedMaxSec=d.schedMaxSec;}
+    if(d.thumbStyle){thumbStyle=d.thumbStyle;document.querySelectorAll('.thumb-style').forEach(el=>el.classList.toggle('on',el.dataset.style===thumbStyle));}
+    const togs=['tog_tags:tog-tags','tog_meta:tog-meta','tog_head:tog-head','tog_dedup:tog-dedup','tog_faq:tog-faq','tog_weekend:tog-weekend','tog_thumb:tog-thumb'];
+    togs.forEach(t=>{const[k,id]=t.split(':');if(d[k]!==undefined){const el=document.getElementById(id);if(el){if(d[k])el.classList.add('on');else el.classList.remove('on');}}});
+    if(d.keywords) updateKw();
+    document.getElementById('save-badge').style.display='flex';
+    showToast('저장된 설정을 불러왔어요');
+    updateStats();
+  }catch(e){}
+}
+
+const v=id=>document.getElementById(id)?.value||'';
+const tog=id=>document.getElementById(id)?.classList.contains('on');
+
+// ── 키워드 ────────────────────────────────────────────────────────────────────
+function updateKw(){
+  const lines=v('keywords').split('\n').filter(l=>l.trim());
+  const n=Math.min(lines.length,999);
+  const cnt=document.getElementById('kw-count');
+  cnt.textContent=n+' / 100';
+  cnt.classList.toggle('warn',n>90);
+  document.getElementById('kw-badge').textContent=n+'개';
+  updateStats();
+}
+
+function loadSampleKw(){
+  document.getElementById('keywords').value=['다이어트 방법','집에서 할 수 있는 운동 루틴 5가지','독서 습관 만들기','재테크 초보가 알아야 할 것들','영어 공부법','스트레스 해소법','수면의 질 높이는 법','절약 노하우','기억력 향상법','집중력 높이는 방법'].join('\n');
+  updateKw();
+}
+
+function clearKw(){if(confirm('키워드를 모두 삭제할까요?')){document.getElementById('keywords').value='';updateKw();}}
+
+// ── 프롬프트 칩 ───────────────────────────────────────────────────────────────
+function ins(id,txt){
+  const el=document.getElementById(id);
+  const s=el.selectionStart,e=el.selectionEnd;
+  el.value=el.value.slice(0,s)+txt+el.value.slice(e);
+  el.focus();el.setSelectionRange(s+txt.length,s+txt.length);
+}
+
+// ── 스케줄 ────────────────────────────────────────────────────────────────────
+function setSched(el,mn,mx,mode){
+  document.querySelectorAll('.sched-card').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('custom-range').style.display=mode==='custom'?'block':'none';
+  if(mode!=='custom'){schedMinSec=mn;schedMaxSec=mx;}
+}
+
+// ── 썸네일 ────────────────────────────────────────────────────────────────────
+function selectThumb(el){
+  document.querySelectorAll('.thumb-style').forEach(e=>e.classList.remove('on'));
+  el.classList.add('on');
+  thumbStyle=el.dataset.style;
+  drawThumb();
+}
+
+const THEMES={
+  blue:{b1:[26,58,107],b2:[0,115,170],t:[255,255,255],s:[179,217,240]},
+  dark:{b1:[26,26,46],b2:[22,33,62],t:[255,255,255],s:[168,178,216]},
+  green:{b1:[26,77,46],b2:[45,122,79],t:[255,255,255],s:[184,240,200]},
+  purple:{b1:[45,27,105],b2:[85,61,139],t:[255,255,255],s:[200,184,240]},
+  orange:{b1:[122,45,0],b2:[196,80,0],t:[255,255,255],s:[255,208,168]},
+};
+
+function drawThumb(){
+  const canvas=document.getElementById('thumb-canvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=800,H=420;
+  const title=v('thumb_preview_text')||'글 제목을 입력하면 미리보기가 표시됩니다';
+  const th=THEMES[thumbStyle]||THEMES.blue;
+  const grad=ctx.createLinearGradient(0,0,W,H);
+  grad.addColorStop(0,`rgb(${th.b1})`);
+  grad.addColorStop(1,`rgb(${th.b2})`);
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(255,255,255,0.05)';
+  for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(W-50+i*30,50+i*40,120+i*50,0,Math.PI*2);ctx.fill();}
+  ctx.fillStyle='rgba(255,255,255,0.07)';
+  ctx.fillRect(0,H-5,W,5);
+  const words=title.split('');
+  const lines=[];let cur='';
+  ctx.font='bold 48px sans-serif';
+  for(const ch of words){
+    if(ctx.measureText(cur+ch).width>W-80){lines.push(cur);cur=ch;}else cur+=ch;
+  }
+  if(cur)lines.push(cur);
+  const lh=62,total=lines.slice(0,3).length*lh;
+  const sy=(H-total)/2;
+  lines.slice(0,3).forEach((line,i)=>{
+    const bx=ctx.measureText(line).width;
+    ctx.fillStyle=`rgba(${th.t},0.15)`;
+    ctx.font='bold 48px sans-serif';
+    ctx.fillStyle=`rgb(${th.t})`;
+    ctx.textAlign='center';
+    ctx.fillText(line,W/2,sy+i*lh+48);
+  });
+  ctx.font='16px sans-serif';
+  ctx.fillStyle=`rgb(${th.s})`;
+  ctx.textAlign='center';
+  ctx.fillText('AI 자동 포스팅 시스템',W/2,H-28);
+}
+
+// ── 연결 테스트 ───────────────────────────────────────────────────────────────
+async function testWP(){
+  const url=v('wp_url').trim(),user=v('wp_user').trim(),pass=v('wp_pass');
+  const el=document.getElementById('wp-test');
+  if(!url||!user||!pass){showResult(el,'URL, 아이디, 비밀번호를 모두 입력해주세요','err');return;}
+  showResult(el,'연결 테스트 중...','');
+  try{
+    const res=await fetch(`${url.replace(/\/$/,'')}/wp-json/wp/v2/users/me`,{headers:{Authorization:'Basic '+btoa(user+':'+pass)}});
+    if(res.ok){const d=await res.json();showResult(el,`✓ 연결 성공! 사용자: ${d.name||user}`,'ok');}
+    else showResult(el,`✗ 연결 실패 (${res.status}) — 아이디/비밀번호 확인`,'err');
+  }catch(e){showResult(el,'✗ 연결 실패 — URL을 확인해주세요','err');}
+}
+
+async function testAPI(){
+  const key=v('api_key').trim();
+  const el=document.getElementById('api-test');
+  if(!key){showResult(el,'API 키를 입력해주세요','err');return;}
+  showResult(el,'API 연결 테스트 중...','');
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:v('api_model'),max_tokens:1000,messages:[{role:'user',content:'안녕하세요. 연결 테스트입니다. "연결 성공"이라고만 답해주세요.'}]})
+    });
+    const d=await res.json();
+    if(res.ok)showResult(el,'✓ API 연결 성공! 모델: '+v('api_model'),'ok');
+    else showResult(el,'✗ API 오류: '+(d.error?.message||'알 수 없는 오류'),'err');
+  }catch(e){showResult(el,'✗ 네트워크 오류','err');}
+}
+
+function showResult(el,msg,type){
+  el.style.display='block';
+  el.className='test-result '+(type==='ok'?'test-ok':type==='err'?'test-err':'');
+  el.textContent=msg;
+}
+
+// ── 자동 실행 ─────────────────────────────────────────────────────────────────
+let kwList=[],doneList=[],currentIdx=0;
+
+function toggleRun(){
+  if(!running) startRun(); else stopRun();
+}
+
+async function startRun(){
+  const kws=v('keywords').split('\n').filter(l=>l.trim());
+  if(!kws.length){alert('키워드를 먼저 입력해주세요');return;}
+  if(!v('api_key').trim()){alert('API 키를 입력해주세요 (기본 설정 탭)');return;}
+
+  kwList=kws;
+  doneList=JSON.parse(localStorage.getItem('wp_poster_done')||'[]');
+  currentIdx=0;
+  running=true;
+
+  document.getElementById('main-btn').textContent='■ 실행 중지';
+  document.getElementById('main-btn').className='btn-full btn-stop';
+  document.getElementById('run-dot').classList.add('on');
+  document.getElementById('run-status-txt').textContent='실행중';
+  go('monitor');
+  addLog('▶ 자동 포스팅 시작. 총 '+kws.length+'개 키워드','info');
+  updateStats();
+  processNext();
+}
+
+function stopRun(){
+  running=false;
+  clearTimeout(runTimer);
+  document.getElementById('main-btn').textContent='▶ 자동 실행 시작';
+  document.getElementById('main-btn').className='btn-full btn-start';
+  document.getElementById('run-dot').classList.remove('on');
+  document.getElementById('run-status-txt').textContent='대기중';
+  document.getElementById('m-next').textContent='—';
+  addLog('■ 실행이 중지됐습니다','wait');
+}
+
+async function processNext(){
+  if(!running)return;
+  // 완료된 키워드 건너뛰기
+  while(currentIdx<kwList.length && doneList.includes(kwList[currentIdx])){
+    addLog(`SKIP: "${kwList[currentIdx]}" (이미 완료)`,'dim');
+    currentIdx++;
+  }
+  if(currentIdx>=kwList.length){
+    addLog('🎉 모든 키워드 처리 완료!','ok');
+    stopRun();return;
+  }
+  const keyword=kwList[currentIdx];
+  addLog(`\n[${currentIdx+1}/${kwList.length}] 처리 시작: "${keyword}"`,'info');
+  updateStats();
+  try{
+    // 1. 키워드 추출
+    addLog('  ① 핵심 키워드 추출 중...','dim');
+    const kwData=await claudeCall(`다음 제목 또는 키워드에서 SEO 핵심 키워드 1개와 LSI 키워드 3~5개를 추출하세요.\n입력: "${keyword}"\n반드시 아래 JSON 형식으로만 출력하세요:\n{"main":"핵심키워드","lsi":["키워드1","키워드2"]}`);
+    let kd;try{kd=JSON.parse(kwData.replace(/```json?|```/g,'').trim());}catch{kd={main:keyword,lsi:[]};}
+    addLog(`     핵심: ${kd.main} | LSI: ${kd.lsi.join(', ')}`,'dim');
+
+    // 2. 제목 생성 (제목 형태면 그대로)
+    addLog('  ② 제목 생성 중...','dim');
+    let title;
+    if(keyword.length>10&&/[가-힣]/.test(keyword)&&keyword.split(' ').length>2){
+      title=keyword;
+      addLog(`     제목 그대로 사용: ${title}`,'dim');
+    }else{
+      const tp=v('p_title').replace(/{keyword}/g,kd.main).replace(/{lang}/g,v('api_lang'));
+      title=(await claudeCall(tp)).replace(/^["'\d\.\)]+|["']+$/g,'').trim();
+      addLog(`     생성된 제목: ${title}`,'dim');
+    }
+
+    // 3. 본문 생성
+    addLog('  ③ 본문 생성 중... (30~60초 소요)','dim');
+    let cp=v('p_content')
+      .replace(/{keyword}/g,kd.main).replace(/{title}/g,title)
+      .replace(/{lang}/g,v('api_lang')).replace(/{tone}/g,v('api_tone'))
+      .replace(/{date}/g,new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'}))
+      .replace(/{min_words}/g,v('api_words'));
+    let content=await claudeCall(cp);
+    // 광고 삽입
+    const adCode=v('ad_code');
+    if(adCode) content=content.replace(/<!--AD_SLOT-->/g,`<div style="text-align:center;margin:28px 0">${adCode}</div>`);
+    const charLen=content.replace(/<[^>]+>/g,'').length;
+    addLog(`     본문 완료: ${charLen.toLocaleString()}자`,'dim');
+
+    // 4. 태그 생성
+    addLog('  ④ 태그 생성 중...','dim');
+    const tagPrompt=v('p_tag').replace(/{keyword}/g,kd.main).replace(/{title}/g,title);
+    const tagRaw=await claudeCall(tagPrompt);
+    const tags=tagRaw.split(',').map(t=>t.trim()).filter(Boolean).slice(0,8);
+    addLog(`     태그: ${tags.join(', ')}`,'dim');
+
+    // 5. WordPress 발행 (CORS로 브라우저에서는 실패할 수 있음)
+    addLog('  ⑤ 워드프레스 발행 중...','dim');
+    try{
+      const url=v('wp_url').replace(/\/$/,'');
+      const user=v('wp_user'),pass=v('wp_pass');
+      // 태그 ID 처리
+      const tagIds=[];
+      for(const tagName of tags){
+        try{
+          const tr=await fetch(`${url}/wp-json/wp/v2/tags?search=${encodeURIComponent(tagName)}`,{headers:{Authorization:'Basic '+btoa(user+':'+pass)}});
+          const td=await tr.json();
+          const found=td.filter(t=>t.name===tagName);
+          if(found.length>0){tagIds.push(found[0].id);}
+          else{const cr=await fetch(`${url}/wp-json/wp/v2/tags`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Basic '+btoa(user+':'+pass)},body:JSON.stringify({name:tagName})});const cd=await cr.json();if(cd.id)tagIds.push(cd.id);}
+        }catch{}
+      }
+      const pr=await fetch(`${url}/wp-json/wp/v2/posts`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json',Authorization:'Basic '+btoa(user+':'+pass)},
+        body:JSON.stringify({title,content,status:v('wp_status'),tags:tagIds,categories:[parseInt(v('wp_cat'))||1]})
+      });
+      if(pr.ok){
+        const pd=await pr.json();
+        addLog(`  ✅ 발행 완료: ${pd.link||''}`, 'ok');
+      }else{
+        addLog(`  ⚠ 발행 실패 (${pr.status}) — Python 스크립트로 실행해주세요`,'wait');
+      }
+    }catch(e){
+      addLog(`  ⚠ CORS 제한 — Python 스크립트 사용 권장`,'wait');
+      addLog(`     (생성된 글은 로그에 기록됨)`,'dim');
+    }
+
+    // 완료 기록
+    doneList.push(keyword);
+    localStorage.setItem('wp_poster_done',JSON.stringify(doneList));
+    currentIdx++;
+    updateStats();
+
+    if(currentIdx<kwList.length&&running){
+      const waitSec=Math.floor(Math.random()*(schedMaxSec-schedMinSec))+schedMinSec;
+      const waitMin=Math.floor(waitSec/60);
+      const nextTime=new Date(Date.now()+waitSec*1000).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+      addLog(`  ⏰ 다음 포스팅까지 ${waitMin}분 대기 (예정: ${nextTime})`,'wait');
+      startCountdown(waitSec);
+    }else{
+      processNext();
+    }
+  }catch(e){
+    addLog(`  ✗ 오류: ${e.message}`,'err');
+    currentIdx++;
+    if(running) runTimer=setTimeout(processNext,5000);
+  }
+}
+
+function startCountdown(sec){
+  nextCountdown=sec;
+  const tick=()=>{
+    if(!running||nextCountdown<=0){if(running)processNext();return;}
+    const m=Math.floor(nextCountdown/60),s=nextCountdown%60;
+    document.getElementById('m-next').textContent=`${m}분 ${s}초`;
+    nextCountdown--;
+    runTimer=setTimeout(tick,1000);
+  };
+  tick();
+}
+
+async function claudeCall(prompt){
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:v('api_model'),max_tokens:1000,messages:[{role:'user',content:prompt}]})
+  });
+  const d=await res.json();
+  if(!res.ok)throw new Error(d.error?.message||'API 오류');
+  return d.content[0].text.trim();
+}
+
+// ── 로그 ─────────────────────────────────────────────────────────────────────
+function addLog(msg,type=''){
+  const box=document.getElementById('log-box');
+  const now=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const cls=type?`log-${type}`:'';
+  box.innerHTML+=`<div class="${cls}"><span style="color:var(--text3)">[${now}]</span> ${msg}</div>`;
+  box.scrollTop=box.scrollHeight;
+}
+
+function clearLog(){document.getElementById('log-box').innerHTML='';}
+
+// ── 통계 ─────────────────────────────────────────────────────────────────────
+function updateStats(){
+  const kws=v('keywords').split('\n').filter(l=>l.trim());
+  const done=JSON.parse(localStorage.getItem('wp_poster_done')||'[]');
+  const doneCount=kws.filter(k=>done.includes(k)).length;
+  const total=kws.length;
+  document.getElementById('m-total').textContent=total;
+  document.getElementById('m-done').textContent=doneCount;
+  document.getElementById('m-left').textContent=Math.max(0,total-doneCount);
+  const pct=total>0?Math.round(doneCount/total*100):0;
+  document.getElementById('m-bar').style.width=pct+'%';
+}
+
+// ── 토스트 ────────────────────────────────────────────────────────────────────
+let toastT;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ── 초기화 ────────────────────────────────────────────────────────────────────
+window.onload=()=>{
+  loadSaved();
+  drawThumb();
+};
+</script>
+</body>
+</html>
